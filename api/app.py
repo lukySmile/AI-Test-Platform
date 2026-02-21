@@ -3,10 +3,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from .routes import test_cases, api_test, ios_test, reports
+from .routes import test_cases, api_test, ios_test, android_test, reports
 from config.settings import get_settings
 from utils.logger import get_logger
 
@@ -52,6 +53,11 @@ def create_app() -> FastAPI:
    - 自动运行iOS测试
    - 生成测试报告
 
+4. **Android模拟器测试**
+   - 生成Espresso/UI Automator测试代码
+   - 自动运行Android测试
+   - 生成测试报告
+
 ### 使用说明
 - 所有接口都支持JSON格式
 - 需要认证的接口请在Header中携带 `Authorization: Bearer <token>`
@@ -75,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(test_cases.router, prefix="/api/v1/test-cases", tags=["测试用例"])
     app.include_router(api_test.router, prefix="/api/v1/api-test", tags=["API测试"])
     app.include_router(ios_test.router, prefix="/api/v1/ios-test", tags=["iOS测试"])
+    app.include_router(android_test.router, prefix="/api/v1/android-test", tags=["Android测试"])
     app.include_router(reports.router, prefix="/api/v1/reports", tags=["测试报告"])
 
     # 静态文件
@@ -82,9 +89,27 @@ def create_app() -> FastAPI:
     reports_dir.mkdir(exist_ok=True)
     app.mount("/reports", StaticFiles(directory=str(reports_dir)), name="reports")
 
-    @app.get("/", tags=["系统"])
+    # 前端静态文件
+    static_dir = Path("./static")
+    static_dir.mkdir(exist_ok=True)
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+    @app.get("/", tags=["系统"], include_in_schema=False)
     async def root():
-        """首页"""
+        """首页 - 返回前端页面"""
+        index_file = Path("./static/index.html")
+        if index_file.exists():
+            return FileResponse(index_file)
+        return {
+            "name": "AI测试平台",
+            "version": "1.0.0",
+            "status": "running",
+            "docs": "/docs",
+        }
+
+    @app.get("/api", tags=["系统"])
+    async def api_info():
+        """API信息"""
         return {
             "name": "AI测试平台",
             "version": "1.0.0",

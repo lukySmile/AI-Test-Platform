@@ -11,13 +11,16 @@ class PromptType(Enum):
     GENERAL_TEST_CASE = "general_test_case"
     API_TEST_CASE = "api_test_case"
     IOS_UI_TEST_CASE = "ios_ui_test_case"
+    ANDROID_UI_TEST_CASE = "android_ui_test_case"
 
     # 代码生成
     IOS_TEST_CODE = "ios_test_code"
+    ANDROID_TEST_CODE = "android_test_code"
 
     # 报告生成
     API_TEST_REPORT = "api_test_report"
     IOS_TEST_REPORT = "ios_test_report"
+    ANDROID_TEST_REPORT = "android_test_report"
 
     # 分析类
     REQUIREMENT_ANALYSIS = "requirement_analysis"
@@ -26,6 +29,7 @@ class PromptType(Enum):
 
     # 命令生成
     IOS_SIMULATOR_COMMAND = "ios_simulator_command"
+    ANDROID_EMULATOR_COMMAND = "android_emulator_command"
 
 
 @dataclass
@@ -121,6 +125,38 @@ PROMPT_CONFIGS: Dict[PromptType, PromptConfig] = {
         name="iOS模拟器命令生成",
         description="生成模拟器控制命令",
         prompt_type=PromptType.IOS_SIMULATOR_COMMAND,
+        max_tokens=2048,
+        temperature=0.3,
+        output_format="code"
+    ),
+    PromptType.ANDROID_UI_TEST_CASE: PromptConfig(
+        name="Android UI测试用例生成",
+        description="根据应用描述生成Android测试用例",
+        prompt_type=PromptType.ANDROID_UI_TEST_CASE,
+        max_tokens=4096,
+        temperature=0.7,
+        output_format="json"
+    ),
+    PromptType.ANDROID_TEST_CODE: PromptConfig(
+        name="Android测试代码生成",
+        description="生成Espresso/UI Automator Kotlin代码",
+        prompt_type=PromptType.ANDROID_TEST_CODE,
+        max_tokens=8192,
+        temperature=0.3,
+        output_format="code"
+    ),
+    PromptType.ANDROID_TEST_REPORT: PromptConfig(
+        name="Android测试报告生成",
+        description="根据Android测试结果生成报告",
+        prompt_type=PromptType.ANDROID_TEST_REPORT,
+        max_tokens=4096,
+        temperature=0.5,
+        output_format="markdown"
+    ),
+    PromptType.ANDROID_EMULATOR_COMMAND: PromptConfig(
+        name="Android模拟器命令生成",
+        description="生成adb控制命令",
+        prompt_type=PromptType.ANDROID_EMULATOR_COMMAND,
         max_tokens=2048,
         temperature=0.3,
         output_format="code"

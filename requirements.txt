@@ -18,8 +18,11 @@ click>=8.0.0
 # 环境变量
 python-dotenv>=1.0.0
 
-# 可选: OpenAI SDK (如果使用OpenAI)
-# openai>=1.0.0
+# OpenAI SDK
+openai>=1.0.0
 
-# 可选: Anthropic SDK (如果使用Claude)
-# anthropic>=0.18.0
+# Anthropic SDK (Claude)
+anthropic>=0.40.0
+
+# Google Gemini SDK
+google-genai>=1.0.0

@@ -49,6 +49,15 @@ class IOSTestCase(TestCase):
     cleanup_steps: Optional[List[str]] = None
 
 
+@dataclass
+class AndroidTestCase(TestCase):
+    """Android测试用例"""
+    suite_name: str = ""
+    element_actions: Optional[List[Dict[str, Any]]] = None
+    resource_ids: Optional[List[str]] = None
+    cleanup_steps: Optional[List[str]] = None
+
+
 class TestCaseService:
     """测试用例服务"""
 
@@ -198,6 +207,77 @@ class TestCaseService:
         # 提取代码块
         import re
         code_match = re.search(r'```swift\s*([\s\S]*?)\s*```', code)
+        if code_match:
+            return code_match.group(1)
+
+        return code
+
+    def generate_android_test_cases(
+        self,
+        app_description: str,
+        package_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        生成Android测试用例
+
+        Args:
+            app_description: 应用功能描述
+            package_name: 应用包名
+
+        Returns:
+            包含Android测试用例的字典
+        """
+        config = get_prompt_config(PromptType.ANDROID_UI_TEST_CASE)
+
+        messages = PromptManager.build_messages(
+            prompt_type=PromptType.ANDROID_UI_TEST_CASE,
+            user_input=app_description,
+            variables={"app_description": app_description}
+        )
+
+        result = self.llm_client.generate_json(
+            messages,
+            max_tokens=config.max_tokens,
+            temperature=config.temperature
+        )
+
+        if package_name:
+            result["package_name"] = package_name
+
+        result["generated_at"] = datetime.now().isoformat()
+
+        return result
+
+    def generate_android_test_code(
+        self,
+        test_case: Dict[str, Any],
+    ) -> str:
+        """
+        生成Android测试代码
+
+        Args:
+            test_case: 测试用例字典
+
+        Returns:
+            Kotlin测试代码
+        """
+        config = get_prompt_config(PromptType.ANDROID_TEST_CODE)
+
+        messages = PromptManager.build_messages(
+            prompt_type=PromptType.ANDROID_TEST_CODE,
+            user_input=json.dumps(test_case, ensure_ascii=False, indent=2),
+            variables={"test_case": json.dumps(test_case, ensure_ascii=False, indent=2)}
+        )
+
+        code = self.llm_client.chat(
+            messages,
+            max_tokens=config.max_tokens,
+            temperature=config.temperature
+        )
+
+        # 提取代码块
+        import re
+        code_match = re.search(r'```kotlin\s*([\s\S]*?)\s*```', code)
         if code_match:
             return code_match.group(1)
 

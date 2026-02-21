@@ -2,6 +2,7 @@
 
 from .api_reporter import APITestReporter
 from .ios_reporter import IOSTestReporter
+from .android_reporter import AndroidTestReporter
 from .html_reporter import HTMLReporter
 
-__all__ = ['APITestReporter', 'IOSTestReporter', 'HTMLReporter']
+__all__ = ['APITestReporter', 'IOSTestReporter', 'AndroidTestReporter', 'HTMLReporter']

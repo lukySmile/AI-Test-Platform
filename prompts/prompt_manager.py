@@ -15,6 +15,12 @@ from .ios_simulator_test import (
     IOS_TEST_REPORT_PROMPT,
     IOS_SIMULATOR_COMMAND_PROMPT,
 )
+from .android_simulator_test import (
+    ANDROID_UI_TEST_CASE_PROMPT,
+    ANDROID_TEST_CODE_GENERATOR_PROMPT,
+    ANDROID_TEST_REPORT_PROMPT,
+    ANDROID_EMULATOR_COMMAND_PROMPT,
+)
 from .system_prompts import (
     PLATFORM_SYSTEM_PROMPT,
     REQUIREMENT_ANALYSIS_PROMPT,
@@ -34,6 +40,10 @@ class PromptManager:
         PromptType.IOS_TEST_CODE: IOS_TEST_CODE_GENERATOR_PROMPT,
         PromptType.API_TEST_REPORT: API_TEST_REPORT_PROMPT,
         PromptType.IOS_TEST_REPORT: IOS_TEST_REPORT_PROMPT,
+        PromptType.ANDROID_UI_TEST_CASE: ANDROID_UI_TEST_CASE_PROMPT,
+        PromptType.ANDROID_TEST_CODE: ANDROID_TEST_CODE_GENERATOR_PROMPT,
+        PromptType.ANDROID_TEST_REPORT: ANDROID_TEST_REPORT_PROMPT,
+        PromptType.ANDROID_EMULATOR_COMMAND: ANDROID_EMULATOR_COMMAND_PROMPT,
         PromptType.REQUIREMENT_ANALYSIS: REQUIREMENT_ANALYSIS_PROMPT,
         PromptType.ERROR_ANALYSIS: ERROR_ANALYSIS_PROMPT,
         PromptType.TEST_DATA_GENERATION: TEST_DATA_GENERATION_PROMPT,
@@ -150,6 +160,22 @@ def get_ios_code_prompt(test_case: str) -> str:
     """获取iOS测试代码生成Prompt"""
     return PromptManager.get_prompt(
         PromptType.IOS_TEST_CODE,
+        {"test_case": test_case}
+    )
+
+
+def get_android_test_prompt(app_description: str) -> str:
+    """获取Android测试用例生成Prompt"""
+    return PromptManager.get_prompt(
+        PromptType.ANDROID_UI_TEST_CASE,
+        {"app_description": app_description}
+    )
+
+
+def get_android_code_prompt(test_case: str) -> str:
+    """获取Android测试代码生成Prompt"""
+    return PromptManager.get_prompt(
+        PromptType.ANDROID_TEST_CODE,
         {"test_case": test_case}
     )
 
