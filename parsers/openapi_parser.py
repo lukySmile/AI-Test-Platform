@@ -62,21 +62,33 @@ class OpenAPIParser:
 
     def _load_spec(self, source: str) -> Dict[str, Any]:
         """加载规范文档"""
-        path = Path(source)
-        if path.exists():
-            content = path.read_text(encoding="utf-8")
-            if path.suffix in [".yaml", ".yml"]:
-                return yaml.safe_load(content)
-            else:
-                return json.loads(content)
-
+        # 首先尝试作为JSON/YAML字符串解析
         try:
             return json.loads(source)
         except json.JSONDecodeError:
+            pass
+
+        try:
+            result = yaml.safe_load(source)
+            if isinstance(result, dict):
+                return result
+        except yaml.YAMLError:
+            pass
+
+        # 如果是短字符串，尝试作为文件路径
+        if len(source) < 500:
+            path = Path(source)
             try:
-                return yaml.safe_load(source)
-            except yaml.YAMLError:
-                raise ValueError("无法解析输入")
+                if path.exists():
+                    content = path.read_text(encoding="utf-8")
+                    if path.suffix in [".yaml", ".yml"]:
+                        return yaml.safe_load(content)
+                    else:
+                        return json.loads(content)
+            except OSError:
+                pass
+
+        raise ValueError("无法解析输入，请提供有效的JSON/YAML格式或文件路径")
 
     def _parse_endpoints(self) -> List[APIEndpoint]:
         """解析所有端点"""

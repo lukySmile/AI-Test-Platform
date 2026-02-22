@@ -1,11 +1,12 @@
 # API测试相关路由
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import asyncio
 
+from core.test_case_service import TestCaseService
 from executors.api_executor import APITestExecutor, APITestSuiteResult
 from reporters.api_reporter import APITestReporter
 from storage.test_case_store import TestCaseStore
@@ -51,6 +52,20 @@ class TestExecutionStatus(BaseModel):
     finished_at: Optional[str]
 
 
+class GenerateTestCasesRequest(BaseModel):
+    """自动生成测试用例请求"""
+    api_doc: str = Field(..., description="API文档内容（Swagger/OpenAPI JSON/YAML）")
+    base_url: Optional[str] = Field(None, description="覆盖API基础URL")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "api_doc": '{"openapi": "3.0.0", "info": {"title": "Example API", "version": "1.0.0"}, "paths": {}}',
+                "base_url": "https://api.example.com"
+            }
+        }
+
+
 # ==================== 状态存储 ====================
 
 # 简单的内存存储，实际生产环境应使用Redis
@@ -58,6 +73,85 @@ execution_status: Dict[str, Dict[str, Any]] = {}
 
 
 # ==================== 路由处理 ====================
+
+@router.post("/generate/auto")
+async def generate_test_cases_auto(request: GenerateTestCasesRequest):
+    """
+    自动生成API测试用例（基于规则，无需AI）
+
+    根据API文档自动生成测试用例，使用测试设计方法：
+    - 等价类划分：有效/无效输入
+    - 边界值分析：边界条件测试
+    - 错误猜测：常见错误场景
+    - 安全测试：SQL注入、XSS等
+
+    支持Swagger 2.0和OpenAPI 3.x格式。
+    """
+    try:
+        logger.info("自动生成API测试用例")
+
+        service = TestCaseService(llm_client=None)  # 不使用AI
+        result = service.generate_api_test_cases_auto(
+            api_doc=request.api_doc,
+            base_url=request.base_url,
+        )
+
+        # 保存生成的用例
+        case_id = case_store.save(result)
+
+        return {
+            "id": case_id,
+            "api_name": result.get("api_name", ""),
+            "api_version": result.get("api_version", ""),
+            "base_url": result.get("base_url", ""),
+            "summary": result.get("summary", {}),
+            "test_suites": result.get("test_suites", []),
+            "generated_at": result.get("generated_at", datetime.now().isoformat()),
+        }
+
+    except Exception as e:
+        logger.error(f"自动生成测试用例失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/generate/auto/file")
+async def generate_test_cases_from_file(
+    file: UploadFile = File(..., description="API文档文件（JSON/YAML）"),
+    base_url: Optional[str] = Form(None, description="覆盖API基础URL"),
+):
+    """
+    从文件自动生成API测试用例
+
+    上传Swagger/OpenAPI文档文件，自动解析并生成测试用例。
+    """
+    try:
+        content = await file.read()
+        api_doc = content.decode("utf-8")
+
+        logger.info(f"从文件生成测试用例: {file.filename}")
+
+        service = TestCaseService(llm_client=None)
+        result = service.generate_api_test_cases_auto(
+            api_doc=api_doc,
+            base_url=base_url,
+        )
+
+        case_id = case_store.save(result)
+
+        return {
+            "id": case_id,
+            "api_name": result.get("api_name", ""),
+            "api_version": result.get("api_version", ""),
+            "base_url": result.get("base_url", ""),
+            "summary": result.get("summary", {}),
+            "test_suites": result.get("test_suites", []),
+            "generated_at": result.get("generated_at", datetime.now().isoformat()),
+        }
+
+    except Exception as e:
+        logger.error(f"从文件生成测试用例失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/execute")
 async def execute_api_test(

@@ -6,8 +6,11 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 
 from .llm_client import LLMClient
+from .test_case_generator import APITestCaseGenerator
 from prompts.prompt_manager import PromptManager
 from prompts.prompt_config import PromptType, get_prompt_config
+from parsers.swagger_parser import SwaggerParser
+from parsers.openapi_parser import OpenAPIParser
 
 
 @dataclass
@@ -337,6 +340,75 @@ class TestCaseService:
             temperature=config.temperature
         )
 
+    def generate_api_test_cases_auto(
+        self,
+        api_doc: str,
+        base_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        自动生成API测试用例（基于规则，无需AI）
+
+        使用测试设计方法：等价类划分、边界值分析、错误猜测等
+
+        Args:
+            api_doc: API文档（Swagger/OpenAPI JSON/YAML）
+            base_url: 可选的基础URL覆盖
+
+        Returns:
+            包含测试用例的字典
+        """
+        # 解析API文档
+        api_spec = self._parse_api_doc(api_doc)
+
+        if base_url:
+            api_spec.base_url = base_url
+
+        # 使用规则生成器生成用例
+        generator = APITestCaseGenerator(api_spec)
+        result = generator.generate_all()
+
+        return result
+
+    def _parse_api_doc(self, api_doc: str):
+        """解析API文档"""
+        import json
+        import yaml
+        from pathlib import Path
+
+        spec_dict = None
+
+        # 首先检查是否是文件路径（短字符串且不以{开头）
+        if len(api_doc) < 500 and not api_doc.strip().startswith("{") and not api_doc.strip().startswith("openapi"):
+            path = Path(api_doc)
+            if path.exists():
+                content = path.read_text(encoding="utf-8")
+                try:
+                    spec_dict = json.loads(content)
+                except json.JSONDecodeError:
+                    spec_dict = yaml.safe_load(content)
+
+        # 尝试解析为JSON/YAML字符串
+        if spec_dict is None:
+            try:
+                spec_dict = json.loads(api_doc)
+            except json.JSONDecodeError:
+                try:
+                    spec_dict = yaml.safe_load(api_doc)
+                except yaml.YAMLError:
+                    raise ValueError("无法解析API文档，请提供有效的JSON/YAML格式")
+
+        if not spec_dict:
+            raise ValueError("API文档解析结果为空")
+
+        # 判断是OpenAPI 3.x还是Swagger 2.0
+        if spec_dict.get("openapi", "").startswith("3."):
+            parser = OpenAPIParser()
+        else:
+            parser = SwaggerParser()
+
+        return parser.parse(api_doc)
+
     def close(self):
         """关闭服务"""
-        self.llm_client.close()
+        if self.llm_client:
+            self.llm_client.close()
